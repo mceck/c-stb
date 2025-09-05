@@ -36,6 +36,7 @@ typedef enum {
 #endif // DS_LOG_LEVEL
 
 static const char *DsLogLevelStrings[] = {
+    [DS_DEBUG] = "DEBUG",
     [DS_INFO] = "INFO",
     [DS_WARN] = "WARN",
     [DS_ERROR] = "ERROR"};
@@ -92,11 +93,11 @@ typedef struct {
  */
 #define ds_da_reserve(da, expected_capacity)                                              \
     do {                                                                                  \
-        if ((expected_capacity) > (da)->capacity) {                                       \
+        if ((size_t)(expected_capacity) > (da)->capacity) {                                       \
             if ((da)->capacity == 0) {                                                    \
                 (da)->capacity = DS_DA_INIT_CAPACITY;                                     \
             }                                                                             \
-            while ((expected_capacity) > (da)->capacity) {                                \
+            while ((size_t)(expected_capacity) > (da)->capacity) {                                \
                 (da)->capacity = (da)->capacity + ((da)->capacity >> 1);                  \
             }                                                                             \
             (da)->items = DS_REALLOC((da)->items, (da)->capacity * sizeof(*(da)->items)); \
