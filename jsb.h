@@ -107,22 +107,22 @@ typedef struct {
     } while (0)
 
 /**
- * Begin a JSB object.
+ * Begin a JSON object.
  * Returns 0 on success, -1 on failure.
  */
 int jsb_begin_object(Jsb *jsb);
 /**
- * End a JSB object.
+ * End a JSON object.
  * Returns 0 on success, -1 on failure.
  */
 int jsb_end_object(Jsb *jsb);
 /**
- * Begin a JSB array.
+ * Begin a JSON array.
  * Returns 0 on success, -1 on failure.
  */
 int jsb_begin_array(Jsb *jsb);
 /**
- * End a JSB array.
+ * End a JSON array.
  * Returns 0 on success, -1 on failure.
  */
 int jsb_end_array(Jsb *jsb);
@@ -165,8 +165,6 @@ int jsb_date_fmt(Jsb *jsb, time_t timestamp, const char *fmt);
  */
 int jsb_null(Jsb *jsb);
 
-// JSB builder
-
 #define jsb_get(jsb) (jsb)->buffer.items
 
 #ifdef JSB_IMPLEMENTATION
@@ -194,7 +192,7 @@ static void jsb_sappends(struct jsb_string *sb, char *c) {
 }
 
 /**
- * Appends a string to the JSB buffer.
+ * Appends a string to the JSON buffer.
  * It will escape the string and wrap it in quotes.
  */
 static void jsb_escaped_nstring(struct jsb_string *sb, const char *str, size_t len) {
