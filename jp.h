@@ -75,6 +75,7 @@ size_t jp_array_len(JpNode *node);
 void jp_free(JpNode *node);
 void jp_print(JpNode *node, int indent);
 
+#ifdef JP_IMPLEMENTATION
 // Helper functions
 static void skip_whitespace(JpParser *parser);
 static JpNode *parse_value(JpParser *parser);
@@ -85,7 +86,6 @@ static JpNode *parse_number(JpParser *parser);
 static JpNode *parse_literal(JpParser *parser);
 static char *extract_string(JpParser *parser);
 
-#ifdef JP_IMPLEMENTATION
 // Create a new JSON node
 static JpNode *JpNode_new(JpType type) {
     JpNode *node = malloc(sizeof(JpNode));

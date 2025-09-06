@@ -335,6 +335,7 @@ int jsb_int(Jsb *jsb, int value) {
     jsb_pretty_print_ch(jsb);
     char numbuf[16];
     int n = snprintf(numbuf, sizeof(numbuf), "%d", value);
+    if (n < 0) return -1;
     jsb_sappends(&jsb->buffer, numbuf);
     jsb->is_first = false;
     jsb->is_key = false;
@@ -347,6 +348,7 @@ int jsb_number(Jsb *jsb, double value, int precision) {
     jsb_pretty_print_ch(jsb);
     char numbuf[64];
     int n = snprintf(numbuf, sizeof(numbuf), "%.*f", precision, value);
+    if (n < 0) return -1;
     jsb_sappends(&jsb->buffer, numbuf);
     jsb->is_first = false;
     jsb->is_key = false;
