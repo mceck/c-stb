@@ -5,6 +5,20 @@
  * Dependent on:
  * - libcurl, link with -lcurl (https://curl.se/libcurl/)
  * - ./ds.h
+ *
+ * Example:
+```c
+    HttpResponse response = {0};
+    // GET url
+    http(url, &response);
+    // GET url with headers
+    HttpHeaders headers = {0};
+    ds_da_append(&headers, "Content-Type: application/json");
+    http(url, &response, .headers = &headers);
+    ds_da_free(&headers);
+    // POST url with data
+    http(url, &response, .method = HTTP_POST, .body="data");
+```
  */
 
 #ifndef HTTP_H_
