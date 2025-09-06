@@ -208,6 +208,32 @@ static int jsp_parse_str(Jsp *jsp) {
             if (jsp->buffer[idx] == 'n') jsp_sappend(&jsp->_sb, '\n');
             if (jsp->buffer[idx] == 't') jsp_sappend(&jsp->_sb, '\t');
             if (jsp->buffer[idx] == '\\' || jsp->buffer[idx] == '"') jsp_sappend(&jsp->_sb, jsp->buffer[idx]);
+            if (jsp->buffer[idx] == 'u') {
+                // Unicode escape \uXXXX
+                if (idx + 4 >= jsp->length) return -1;
+                char hex[5] = {0};
+                memcpy(hex, jsp->buffer + idx + 1, 4);
+                char *endptr;
+                long codepoint = strtol(hex, &endptr, 16);
+                if (*endptr != '\0' || codepoint < 0 || codepoint > 0x10FFFF) return -1;
+                // Convert codepoint to UTF-8
+                if (codepoint <= 0x7F) {
+                    jsp_sappend(&jsp->_sb, (char)codepoint);
+                } else if (codepoint <= 0x7FF) {
+                    jsp_sappend(&jsp->_sb, (char)(0xC0 | ((codepoint >> 6) & 0x1F)));
+                    jsp_sappend(&jsp->_sb, (char)(0x80 | (codepoint & 0x3F)));
+                } else if (codepoint <= 0xFFFF) {
+                    jsp_sappend(&jsp->_sb, (char)(0xE0 | ((codepoint >> 12) & 0x0F)));
+                    jsp_sappend(&jsp->_sb, (char)(0x80 | ((codepoint >> 6) & 0x3F)));
+                    jsp_sappend(&jsp->_sb, (char)(0x80 | (codepoint & 0x3F)));
+                } else {
+                    jsp_sappend(&jsp->_sb, (char)(0xF0 | ((codepoint >> 18) & 0x07)));
+                    jsp_sappend(&jsp->_sb, (char)(0x80 | ((codepoint >> 12) & 0x3F)));
+                    jsp_sappend(&jsp->_sb, (char)(0x80 | ((codepoint >> 6) & 0x3F)));
+                    jsp_sappend(&jsp->_sb, (char)(0x80 | (codepoint & 0x3F)));
+                }
+                idx += 4;
+            }
         } else {
             jsp_sappend(&jsp->_sb, jsp->buffer[idx]);
         }
