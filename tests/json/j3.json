@@ -1,0 +1,70 @@
+{
+  "metadata": {
+    "timestamp": "2024-03-15T14:30:45.123Z",
+    "encoding": "UTF-8",
+    "special_chars": "àáâãäåæçèéêë日本語🚀\"'\\",
+    "escaped_quotes": "Questo è un \"test\" con 'virgolette' e \\backslash\\"
+  },
+  "data": {
+    "users": [
+      {
+        "id": 1001,
+        "name": "Giovanni O'Connor",
+        "email": "giovanni@test.com",
+        "preferences": {
+          "theme": "dark",
+          "notifications": {
+            "email": true,
+            "push": false,
+            "sms": null,
+            "frequency": {
+              "morning": [8, 9, 10],
+              "evening": [18, 19, 20, 21]
+            }
+          }
+        },
+        "activity_log": [
+          {
+            "action": "login",
+            "timestamp": "2024-03-15T08:15:30Z",
+            "metadata": {
+              "ip": "192.168.1.100",
+              "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }
+          },
+          {
+            "action": "view_page",
+            "timestamp": "2024-03-15T08:16:45Z",
+            "page_data": {
+              "url": "/dashboard",
+              "load_time": 1.234,
+              "interactions": [
+                { "type": "click", "element": "#sidebar-menu", "count": 3 },
+                { "type": "scroll", "pixels": 1024, "duration": 2.5 }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "system_config": {
+      "database": {
+        "host": "db.example.com",
+        "port": 5432,
+        "credentials": {
+          "encrypted": true,
+          "hash": "sha256$a1b2c3d4e5f6...",
+          "salt": "random_salt_123"
+        }
+      },
+      "api_endpoints": {
+        "/api/v1/users": { "methods": ["GET", "POST"], "rate_limit": 1000 },
+        "/api/v2/data": {
+          "methods": ["GET"],
+          "deprecated": true,
+          "sunset_date": "2024-12-31"
+        }
+      }
+    }
+  }
+}

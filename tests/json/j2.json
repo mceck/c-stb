@@ -1,0 +1,56 @@
+{
+  "survey_results": {
+    "survey_id": "SURV_2024_001",
+    "responses": [
+      {
+        "respondent_id": "USER_123",
+        "answers": {
+          "q1": "Molto soddisfatto",
+          "q2": 8.5,
+          "q3": ["opzione_a", "opzione_c"],
+          "q4": null,
+          "q5": {
+            "rating": 9,
+            "comment": "Eccellente servizio! Continuate così 👍",
+            "follow_up": true
+          }
+        },
+        "completion_time": 180.5,
+        "device_info": "mobile"
+      },
+      {
+        "respondent_id": "USER_456",
+        "answers": {
+          "q1": null,
+          "q2": "N/A",
+          "q3": "opzione_b",
+          "q4": ["Si", "No", "Forse", 42, true],
+          "q5": "Non applicabile"
+        },
+        "completion_time": "5 minuti circa",
+        "device_info": {
+          "type": "desktop",
+          "browser": "Chrome",
+          "version": "120.0.6099.109"
+        }
+      }
+    ],
+    "analytics": {
+      "avg_completion_time": 142.75,
+      "response_rates": {
+        "q1": "85.5%",
+        "q2": 0.823,
+        "q3": [0.91, 0.88, 0.76],
+        "q4": { "valid": 156, "invalid": 23, "null": 21 },
+        "q5": "Variable format responses"
+      },
+      "demographics": [
+        ["age_group", "18-25", 45],
+        ["age_group", "26-35", 67],
+        ["gender", "M", 98],
+        ["gender", "F", 102],
+        ["location", "North", { "count": 89, "percentage": 44.5 }]
+      ]
+    }
+  }
+}
