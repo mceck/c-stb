@@ -59,11 +59,14 @@ static const char *DsLogLevelStrings[] = {
         }                                                                                      \
     } while (0)
 #define ds_log_info(FMT, ...) ds_log(INFO, FMT, __VA_ARGS__)
+#define ds_log_debug(FMT, ...) ds_log(DEBUG, FMT, __VA_ARGS__)
+#define ds_log_warn(FMT, ...) ds_log(WARN, FMT, __VA_ARGS__)
+#define ds_log_error(FMT, ...) ds_log(ERROR, FMT, __VA_ARGS__)
 
-#define DS_TODO(msg)                         \
-    do {                                     \
-        ds_log(DS_ERROR, "TODO: %s\n", msg); \
-        abort();                             \
+#define DS_TODO(msg)                                                                     \
+    do {                                                                                 \
+        ds_log(DS_WARN, "TODO: %s\nat %s::%s::%d\n", msg, __FILE__, __func__, __LINE__); \
+        abort();                                                                         \
     } while (0)
 #define DS_UNREACHABLE()                                                                  \
     do {                                                                                  \
@@ -175,6 +178,42 @@ typedef struct {
     } while (0)
 
 /**
+ * Insert an item at a specific index in a dynamic array.
+ * Example:
+ *   `ds_da_insert(&a, 1, 42); // [1,2,3] -> [1,42,2,3]`
+ */
+#define ds_da_insert(da, idx, item)                            \
+    do {                                                       \
+        if ((idx) > (da)->count) (idx) = (da)->count;          \
+        ds_da_reserve((da), (da)->count + 1);                  \
+        memmove(&(da)->items[(idx) + 1], &(da)->items[(idx)],  \
+                ((da)->count - (idx)) * sizeof(*(da)->items)); \
+        (da)->items[(idx)] = (item);                           \
+        (da)->count++;                                         \
+    } while (0)
+
+/**
+ * Prepend an item to a dynamic array.
+ * Example:
+ ```c
+ ds_da_declare(my_array, int);
+ ...
+    my_array a = {0};
+    ds_da_prepend(&a, 42);
+ ```
+ */
+#define ds_da_prepend(da, item) ds_da_insert((da), 0, (item))
+/**
+ * Get a pointer to the last item of a dynamic array, or NULL if the array is empty.
+ */
+#define ds_da_last(da) ((da)->count > 0 ? &(da)->items[(da)->count - 1] : NULL)
+
+/**
+ * Get a pointer to the first item of a dynamic array, or NULL if the array is empty.
+ */
+#define ds_da_first(da) ((da)->count > 0 ? &(da)->items[0] : NULL)
+
+/**
  * Reset a dynamic array. It will not free the underlying memory.
  */
 #define ds_da_zero(da)      \
@@ -198,9 +237,9 @@ typedef struct {
  * Example:
  *   `ds_da_foreach(&a, item) { printf("%d\n", item); }`
  */
-#define ds_da_foreach(da, var)    \
-    __typeof__(*(da)->items) var; \
-    for (size_t _i = 0; _i < (da)->count && (var = (da)->items[_i]); _i++)
+#define ds_da_foreach(da, var)   \
+    __typeof__((da)->items) var; \
+    for (size_t _i = 0; _i < (da)->count && (var = &(da)->items[_i]); _i++)
 
 /**
  * Find an item in a dynamic array. It returns a pointer to the item, or NULL if not found.
@@ -262,6 +301,23 @@ void _ds_sb_append(DsStringBuilder *sb, ...) {
  *   `ds_sb_append(&sb, "Hello, ", "World", ...);`
  */
 #define ds_sb_append(sb, ...) _ds_sb_append(sb __VA_OPT__(, ) __VA_ARGS__, NULL)
+
+/**
+ * Insert a string at a specific index in the string builder.
+ */
+void ds_sb_insert(DsStringBuilder *sb, const char *str, size_t index) {
+    if (!sb || !str || index > sb->count) return;
+    size_t len = strlen(str);
+    ds_da_reserve(sb, sb->count + len + 1);
+    memmove(sb->items + index + len, sb->items + index, sb->count - index);
+    memcpy(sb->items + index, str, len);
+    sb->count += len;
+}
+
+/**
+ * Prepend a string to the string builder.
+ */
+#define ds_sb_prepend(sb, str) ds_sb_insert((sb), (str), 0)
 
 /**
  * Check if a substring is included in the string builder.
@@ -842,6 +898,10 @@ bool ds_mkdir_p(const char *path) {
 #define TODO DS_TODO
 #define log ds_log
 #define log_info ds_log_info
+#define log_debug ds_log_debug
+#define log_warn ds_log_warn
+#define log_error ds_log_error
+#define DEBUG DS_DEBUG
 #define INFO DS_INFO
 #define WARN DS_WARN
 #define ERROR DS_ERROR
@@ -849,14 +909,20 @@ bool ds_mkdir_p(const char *path) {
 #define da_reserve ds_da_reserve
 #define da_append ds_da_append
 #define da_remove ds_da_remove
+#define da_insert ds_da_insert
+#define da_prepend ds_da_prepend
 #define da_pop ds_da_pop
 #define da_append_many ds_da_append_many
+#define da_last ds_da_last
+#define da_first ds_da_first
 #define da_zero ds_da_zero
 #define da_free ds_da_free
 #define da_foreach ds_da_foreach
 #define da_find ds_da_find
 #define da_index_of ds_da_index_of
 #define sb_append ds_sb_append
+#define sb_insert ds_sb_insert
+#define sb_prepend ds_sb_prepend
 #define sb_include ds_sb_include
 #define sb_ltrim ds_sb_ltrim
 #define sb_rtrim ds_sb_rtrim

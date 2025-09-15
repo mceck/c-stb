@@ -33,7 +33,7 @@ int test_get() {
             jsp_value(&jsp);
             log_info("Post userId[%d]: %f\n", jsp.type, jsp.number);
         } else {
-            jsp_value(&jsp); // skip other values
+            jsp_skip(&jsp); // skip other values
             log_info("Skipped value of type %d\n", jsp.type);
         }
     }
@@ -129,12 +129,12 @@ int test_post() {
                     }
                     jsp_end_array(&jsp);
                 } else {
-                    jsp_value(&jsp); // skip other values
+                    jsp_skip(&jsp); // skip other values
                     log_info("  Skipped value of type %d\n", jsp.type);
                 }
             }
         } else {
-            jsp_value(&jsp); // skip other values
+            jsp_skip(&jsp); // skip other values
             log_info("Skipped value of type %d\n", jsp.type);
         }
     }
@@ -291,7 +291,7 @@ int test_jsp_j1() {
             }
             LOG_TEST jsp_end_array(&jsp);
         } else {
-            LOG_TEST jsp_value(&jsp); // skip other values
+            LOG_TEST jsp_skip(&jsp); // skip other values
         }
     }
     LOG_TEST jsp_end_object(&jsp);
@@ -418,24 +418,7 @@ int test_jsp_j2() {
                                     printf("}\n");
                                 }
                             } else {
-                                // Skip unknown key - try value first, then object/array
-                                if (jsp_value(&jsp) != 0) {
-                                    if (jsp_begin_object(&jsp) == 0) {
-                                        // Skip entire object
-                                        while (jsp_key(&jsp) == 0) {
-                                            if (jsp_value(&jsp) != 0) {
-                                                if (jsp_begin_object(&jsp) == 0) {
-                                                    LOG_TEST jsp_end_object(&jsp);
-                                                } else if (jsp_begin_array(&jsp) == 0) {
-                                                    LOG_TEST jsp_end_array(&jsp);
-                                                }
-                                            }
-                                        }
-                                        LOG_TEST jsp_end_object(&jsp);
-                                    } else if (jsp_begin_array(&jsp) == 0) {
-                                        LOG_TEST jsp_end_array(&jsp);
-                                    }
-                                }
+                                jsp_skip(&jsp); // skip other values
                             }
                         }
                         LOG_TEST jsp_end_object(&jsp);
@@ -537,13 +520,13 @@ int test_jsp_j2() {
                     LOG_TEST jsp_end_object(&jsp);
                 } else {
                     // Skip unknown survey_results key
-                    LOG_TEST jsp_value(&jsp);
+                    LOG_TEST jsp_skip(&jsp);
                 }
             }
             LOG_TEST jsp_end_object(&jsp);
         } else {
             // Skip unknown root key
-            LOG_TEST jsp_value(&jsp);
+            LOG_TEST jsp_skip(&jsp);
         }
     }
     LOG_TEST jsp_end_object(&jsp);
@@ -652,13 +635,7 @@ int test_jsp_j3() {
                                         LOG_TEST jsp_end_object(&jsp);
                                     } else {
                                         // Skip other preference keys
-                                        if (jsp_value(&jsp) != 0) {
-                                            if (jsp_begin_object(&jsp) == 0) {
-                                                LOG_TEST jsp_end_object(&jsp);
-                                            } else if (jsp_begin_array(&jsp) == 0) {
-                                                LOG_TEST jsp_end_array(&jsp);
-                                            }
-                                        }
+                                        jsp_skip(&jsp);
                                     }
                                 }
                                 LOG_TEST jsp_end_object(&jsp);
@@ -722,19 +699,13 @@ int test_jsp_j3() {
                                                     LOG_TEST jsp_end_array(&jsp);
                                                 } else {
                                                     // Skip other page_data keys
-                                                    LOG_TEST jsp_value(&jsp);
+                                                    LOG_TEST jsp_skip(&jsp);
                                                 }
                                             }
                                             LOG_TEST jsp_end_object(&jsp);
                                         } else {
                                             // Skip other activity keys
-                                            if (jsp_value(&jsp) != 0) {
-                                                if (jsp_begin_object(&jsp) == 0) {
-                                                    LOG_TEST jsp_end_object(&jsp);
-                                                } else if (jsp_begin_array(&jsp) == 0) {
-                                                    LOG_TEST jsp_end_array(&jsp);
-                                                }
-                                            }
+                                            jsp_skip(&jsp);
                                         }
                                     }
                                     LOG_TEST jsp_end_object(&jsp);
@@ -742,13 +713,7 @@ int test_jsp_j3() {
                                 LOG_TEST jsp_end_array(&jsp);
                             } else {
                                 // Skip other user keys
-                                if (jsp_value(&jsp) != 0) {
-                                    if (jsp_begin_object(&jsp) == 0) {
-                                        LOG_TEST jsp_end_object(&jsp);
-                                    } else if (jsp_begin_array(&jsp) == 0) {
-                                        LOG_TEST jsp_end_array(&jsp);
-                                    }
-                                }
+                                jsp_skip(&jsp);
                             }
                         }
                         LOG_TEST jsp_end_object(&jsp);
@@ -830,37 +795,19 @@ int test_jsp_j3() {
                             LOG_TEST jsp_end_object(&jsp);
                         } else {
                             // Skip other system_config keys
-                            if (jsp_value(&jsp) != 0) {
-                                if (jsp_begin_object(&jsp) == 0) {
-                                    LOG_TEST jsp_end_object(&jsp);
-                                } else if (jsp_begin_array(&jsp) == 0) {
-                                    LOG_TEST jsp_end_array(&jsp);
-                                }
-                            }
+                            jsp_skip(&jsp);
                         }
                     }
                     LOG_TEST jsp_end_object(&jsp);
                 } else {
                     // Skip other data keys
-                    if (jsp_value(&jsp) != 0) {
-                        if (jsp_begin_object(&jsp) == 0) {
-                            LOG_TEST jsp_end_object(&jsp);
-                        } else if (jsp_begin_array(&jsp) == 0) {
-                            LOG_TEST jsp_end_array(&jsp);
-                        }
-                    }
+                    jsp_skip(&jsp);
                 }
             }
             LOG_TEST jsp_end_object(&jsp);
         } else {
             // Skip other root keys
-            if (jsp_value(&jsp) != 0) {
-                if (jsp_begin_object(&jsp) == 0) {
-                    LOG_TEST jsp_end_object(&jsp);
-                } else if (jsp_begin_array(&jsp) == 0) {
-                    LOG_TEST jsp_end_array(&jsp);
-                }
-            }
+            jsp_skip(&jsp);
         }
     }
     LOG_TEST jsp_end_object(&jsp);

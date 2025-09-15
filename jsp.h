@@ -74,6 +74,8 @@ typedef enum {
     JSP_TYPE_NUMBER,
     JSP_TYPE_BOOLEAN,
     JSP_TYPE_NULL,
+    JSP_TYPE_ARRAY,
+    JSP_TYPE_OBJECT,
     JSP_TYPE_UNKNOWN
 } JspType;
 
@@ -126,6 +128,11 @@ int jsp_begin_array(Jsp *jsp);
  */
 int jsp_end_array(Jsp *jsp);
 /**
+ * Get the length of a JSON array.
+ * Returns the number of elements in the array, or -1 on failure.
+ */
+int jsp_array_length(Jsp *jsp);
+/**
  * Try parse a key in a JSON object.
  * Returns 0 on success, -1 on failure.
  */
@@ -139,16 +146,23 @@ int jsp_value(Jsp *jsp);
  * Free JSP resources.
  */
 void jsp_free(Jsp *jsp);
+/**
+ * Skip to the next value in the JSON stream.
+ * Returns 0 on success, -1 on failure.
+ */
+int jsp_skip(Jsp *jsp);
 
 #ifdef JSP_IMPLEMENTATION
 
 // Dynamic string functions
-static void jsp_srealloc(struct jsp_string *sb, size_t new_capacity) {
-    if (new_capacity <= sb->capacity) return;
-    if (new_capacity < JSP_SMIN_CAPACITY) new_capacity = JSP_SMIN_CAPACITY;
-    sb->items = JSP_REALLOC(sb->items, new_capacity);
+static void jsp_srealloc(struct jsp_string *sb, size_t size) {
+    if (size <= sb->capacity) return;
+    size_t new_cap = sb->capacity ? sb->capacity : JSP_SMIN_CAPACITY;
+    while (new_cap < size)
+        new_cap *= 2;
+    sb->items = JSP_REALLOC(sb->items, new_cap);
     assert(sb->items != NULL);
-    sb->capacity = new_capacity;
+    sb->capacity = new_cap;
 }
 static void jsp_sappend(struct jsp_string *sb, char c) {
     jsp_srealloc(sb, sb->count + 2);
@@ -191,24 +205,39 @@ static int jsp_skip_end(Jsp *jsp) {
 // Parse string value
 static int jsp_parse_str(Jsp *jsp) {
     size_t idx = jsp->off;
+    size_t len = 0;
     if (jsp->buffer[idx++] != '"') return -1;
+    const char *ptr = jsp->buffer + idx;
     jsp->_sb.count = 0;
     while (true) {
         if (idx >= jsp->length) return -1;
         if (jsp->buffer[idx] == '"') {
-            jsp_sappend(&jsp->_sb, '\0');
-
+            if (len > 0) {
+                jsp_srealloc(&jsp->_sb, jsp->_sb.count + len + 1);
+                memcpy(jsp->_sb.items + jsp->_sb.count, ptr, len);
+                jsp->_sb.count += len;
+            }
+            jsp->_sb.items[jsp->_sb.count] = '\0';
             jsp->off = idx + 1;
             jsp->string = jsp->_sb.items;
             return 0;
         }
         if (jsp->buffer[idx] == '\\') {
+            if (len > 0) {
+                jsp_srealloc(&jsp->_sb, jsp->_sb.count + len + 5);
+                memcpy(jsp->_sb.items + jsp->_sb.count, ptr, len);
+                jsp->_sb.count += len;
+                len = 0;
+            }
             idx++;
             if (idx >= jsp->length) return -1;
-            if (jsp->buffer[idx] == 'n') jsp_sappend(&jsp->_sb, '\n');
-            if (jsp->buffer[idx] == 't') jsp_sappend(&jsp->_sb, '\t');
-            if (jsp->buffer[idx] == '\\' || jsp->buffer[idx] == '"') jsp_sappend(&jsp->_sb, jsp->buffer[idx]);
-            if (jsp->buffer[idx] == 'u') {
+            if (jsp->buffer[idx] == 'n') {
+                jsp_sappend(&jsp->_sb, '\n');
+            } else if (jsp->buffer[idx] == 't') {
+                jsp_sappend(&jsp->_sb, '\t');
+            } else if (jsp->buffer[idx] == '\\' || jsp->buffer[idx] == '"') {
+                jsp_sappend(&jsp->_sb, jsp->buffer[idx]);
+            } else if (jsp->buffer[idx] == 'u') {
                 // Unicode escape \uXXXX
                 if (idx + 4 >= jsp->length) return -1;
                 char hex[5] = {0};
@@ -234,8 +263,9 @@ static int jsp_parse_str(Jsp *jsp) {
                 }
                 idx += 4;
             }
+            ptr = jsp->buffer + idx + 1;
         } else {
-            jsp_sappend(&jsp->_sb, jsp->buffer[idx]);
+            len++;
         }
         idx++;
     }
@@ -280,8 +310,16 @@ static int jsp_parse_null(Jsp *jsp) {
     return -1;
 }
 
+// Zero the return values
+static void jsp_zero_ret(Jsp *jsp) {
+    jsp->_sb.count = 0;
+    jsp->string = NULL;
+    jsp->number = 0;
+    jsp->boolean = false;
+}
+
 // Infer the type of the next value
-static int jsp_infer_type(Jsp *jsp) {
+int jsp_infer_type(Jsp *jsp) {
     if (jsp->off >= jsp->length) return -1;
     char c = jsp->buffer[jsp->off];
     if (c == '"') {
@@ -298,6 +336,14 @@ static int jsp_infer_type(Jsp *jsp) {
     }
     if (c == '-' || isdigit(c)) {
         jsp->type = JSP_TYPE_NUMBER;
+        return 0;
+    }
+    if (c == '{') {
+        jsp->type = JSP_TYPE_OBJECT;
+        return 0;
+    }
+    if (c == '[') {
+        jsp->type = JSP_TYPE_ARRAY;
         return 0;
     }
     return -1;
@@ -358,6 +404,17 @@ int jsp_end_array(Jsp *jsp) {
     return 0;
 }
 
+int jsp_array_length(Jsp *jsp) {
+    if (jsp->state[jsp->level] != JSP_ARRAY) return -1;
+    int len = 0;
+    size_t off = jsp->off;
+    while (jsp_skip(jsp) == 0)
+        len++;
+
+    jsp->off = off;
+    return len;
+}
+
 int jsp_key(Jsp *jsp) {
     if (jsp->state[jsp->level] != JSP_OBJECT) return -1;
     if (jsp_parse_str(jsp)) return -1;
@@ -370,6 +427,7 @@ int jsp_value(Jsp *jsp) {
     if (jsp->state[jsp->level] != JSP_KEY && jsp->state[jsp->level] != JSP_ARRAY)
         return -1;
     if (jsp_infer_type(jsp)) return -1;
+    jsp_zero_ret(jsp);
     int ret = 0;
     switch (jsp->type) {
     case JSP_TYPE_STRING:
@@ -390,6 +448,31 @@ int jsp_value(Jsp *jsp) {
     if (!ret) {
         if (jsp->state[jsp->level] == JSP_KEY) jsp->level--;
         if (jsp_skip_end(jsp)) return -1;
+    }
+    return ret;
+}
+
+int jsp_skip(Jsp *jsp) {
+    int ret = jsp_value(jsp);
+    if (ret) {
+        if (jsp->type == JSP_TYPE_OBJECT) {
+            ret = jsp_begin_object(jsp);
+            if (ret) return ret;
+            while (jsp_key(jsp) == 0) {
+                ret = jsp_skip(jsp);
+                if (ret) break;
+            }
+            ret = jsp_end_object(jsp);
+        } else if (jsp->type == JSP_TYPE_ARRAY) {
+            ret = jsp_begin_array(jsp);
+            if (ret) return ret;
+            while (true) {
+                ret = jsp_skip(jsp);
+                if (ret) break;
+            }
+            ret = jsp_end_array(jsp);
+        }
+        if (!ret && jsp->state[jsp->level] == JSP_KEY) jsp->level--;
     }
     return ret;
 }

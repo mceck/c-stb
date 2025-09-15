@@ -136,7 +136,7 @@ int jsb_key(Jsb *jsb, const char *key);
  * Returns 0 on success, -1 on failure.
  */
 int jsb_nstring(Jsb *jsb, const char *str, size_t len);
-#define jsb_string(jsb, str) jsb_nstring(jsb, str, strlen(str))
+#define jsb_string(jsb, str) jsb_nstring(jsb, str, str ? strlen(str) : 0)
 /**
  * Add an integer value.
  * Returns 0 on success, -1 on failure.
@@ -172,9 +172,12 @@ int jsb_null(Jsb *jsb);
 static void jsb_srealloc(struct jsb_string *sb, size_t new_capacity) {
     if (new_capacity <= sb->capacity) return;
     if (new_capacity < JSB_SMIN_CAPACITY) new_capacity = JSB_SMIN_CAPACITY;
-    sb->items = JSB_REALLOC(sb->items, new_capacity);
+    size_t cap = sb->capacity ? sb->capacity : JSB_SMIN_CAPACITY;
+    while (cap < new_capacity)
+        cap *= 2;
+    sb->items = JSB_REALLOC(sb->items, cap);
     assert(sb->items != NULL);
-    sb->capacity = new_capacity;
+    sb->capacity = cap;
 }
 static void jsb_sappend(struct jsb_string *sb, char c) {
     jsb_srealloc(sb, sb->count + 2);
@@ -320,10 +323,12 @@ int jsb_key(Jsb *jsb, const char *key) {
 }
 
 int jsb_nstring(Jsb *jsb, const char *str, size_t len) {
+    if (!str) return jsb_null(jsb);
     if (jsb_check_val(jsb)) return -1;
     if (!jsb->is_first) jsb_sappend(&jsb->buffer, ',');
     jsb_pretty_print_ch(jsb);
     jsb_escaped_nstring(&jsb->buffer, str, len);
+    jsb_sappend(&jsb->buffer, '\0');
     jsb->is_first = false;
     jsb->is_key = false;
     return 0;
