@@ -1,7 +1,7 @@
 #define STB_C_LEXER_IMPLEMENTATION
 #include "stb_c_lexer.h"
 #define DS_NO_PREFIX
-#include "../ds.h"
+#include "ds.h"
 #include <stdbool.h>
 #include <string.h>
 #include <stdarg.h>
