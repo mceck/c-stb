@@ -78,8 +78,8 @@ void *jsgen_malloc(JsGenAllocator *a, size_t size) {
         size_t region_size = sizeof(JsGenRegion) + (size > ALL_REGION_MIN_SIZE ? size : ALL_REGION_MIN_SIZE);
         JsGenRegion *r = JSGEN_MALLOC(region_size);
         if (!r) return NULL;
-        r->count = sizeof(JsGenRegion);
-        r->capacity = region_size;
+        r->count = 0;
+        r->capacity = region_size - sizeof(JsGenRegion);
         r->next = NULL;
         if (a->end) {
             a->end->next = r;
