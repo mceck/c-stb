@@ -18,6 +18,7 @@ typedef struct {
     bool has_counter;
     char counter_field[128];
     bool is_counter_field;
+    bool is_json_literal;
 } Field;
 
 da_declare(Fields, Field);
@@ -127,6 +128,10 @@ int parse_field_annotation(Parser *p) {
     }
     if (strcmp(p->lex->string, "jsgen_ignore") == 0) {
         if (p->current_model->fields.count > 0) p->current_model->fields.count--;
+        return 1;
+    }
+    if (strcmp(p->lex->string, "jsgen_json_literal") == 0 || strcmp(p->lex->string, "json_literal") == 0) {
+        field->is_json_literal = true;
         return 1;
     }
     return 0;
@@ -254,6 +259,23 @@ void gen_parse_field_body(StringBuilder *sb, Field *field, int indent) {
         sb_cat_line(sb, indent, "err = jsp_value(jsp);");
         sb_cat_line(sb, indent, "if (err) return err;");
         if (strcmp(jsp_type, "string") == 0) {
+            if (field->is_json_literal) {
+                sb_cat_line(sb, indent, "size_t start = jsp->off - 1;");
+                sb_cat_line(sb, indent, "int brace_count = 1;");
+                sb_cat_line(sb, indent, "char ob = (jsp->type == JSP_TYPE_OBJECT ? '{' : '[');");
+                sb_cat_line(sb, indent, "char cb = (jsp->type == JSP_TYPE_OBJECT ? '}' : ']');");
+                sb_cat_line(sb, indent, "while (jsp->off < jsp->length && brace_count > 0) {");
+                sb_cat_line(sb, indent + 1, "if (jsp->buffer[jsp->off] == '\\\\') jsp->off++;");
+                sb_cat_line(sb, indent + 1, "else if (jsp->buffer[jsp->off] == ob) brace_count++;");
+                sb_cat_line(sb, indent + 1, "else if (jsp->buffer[jsp->off] == cb) brace_count--;");
+                sb_cat_line(sb, indent + 1, "jsp->off++;");
+                sb_cat_line(sb, indent, "}");
+                sb_cat_line(sb, indent, "size_t fldlen = jsp->off - start;");
+                sb_cat_line(sb, indent, "out->", field->name, " = jsgen_malloc(a, fldlen + 1);");
+                sb_cat_line(sb, indent, "memcpy(out->", field->name, ", &jsp->buffer[start], fldlen);");
+                sb_cat_line(sb, indent, "out->", field->name, "[fldlen] = '\\0';");
+                sb_cat_line(sb, indent, "jsp_skip_end(jsp);");
+            }
             if (field->is_pointer) {
                 sb_cat_line(sb, indent, "size_t s_len = jsp->string ? strlen(jsp->string) : 0;");
                 if (field->has_counter) sb_cat_line(sb, indent, "out->", field->counter_field, " = s_len;");
@@ -313,12 +335,28 @@ void gen_parse_field_body(StringBuilder *sb, Field *field, int indent) {
 
 void gen_stringify_field(StringBuilder *sb, Field *field, int indent) {
     if (field->is_counter_field) return;
+    if (field->is_pointer) {
+        sb_cat_line(sb, indent, "if (in->", field->name, " != NULL) {");
+        indent++;
+    }
 
     sb_cat_line(sb, indent, "if (jsb_key(jsb, \"", js_getalias(field), "\")) return -1;");
     const char *jsb_type = get_jsb_type(field->type);
 
     if (jsb_type) {
-        sb_cat_line(sb, indent, "if (jsb_", jsb_type, "(jsb, in->", field->name, ")) return -1;");
+        if (field->is_json_literal) {
+            sb_cat_line(sb, indent, "size_t plen = in->", field->name, " ? strlen(in->", field->name, ") : 0;");
+            sb_cat_line(sb, indent, "if (plen > 0) {");
+            sb_cat_line(sb, indent + 1, "jsb_srealloc(&jsb->buffer, jsb->buffer.count + plen + 1);");
+            sb_cat_line(sb, indent + 1, "memcpy(jsb->buffer.items + jsb->buffer.count, in->", field->name, ", plen);");
+            sb_cat_line(sb, indent + 1, "jsb->buffer.count += plen;");
+            sb_cat_line(sb, indent + 1, "jsb->buffer.items[jsb->buffer.count] = '\\0';");
+            sb_cat_line(sb, indent + 1, "jsb->is_first = false;");
+            sb_cat_line(sb, indent + 1, "jsb->is_key = false;");
+            sb_cat_line(sb, indent, "} else jsb_null(jsb);");
+        } else {
+            sb_cat_line(sb, indent, "if (jsb_", jsb_type, "(jsb, in->", field->name, (strcmp(jsb_type, "number") == 0 ? ", 5" : ""), ")) return -1;");
+        }
     } else if (field->is_array) {
         sb_cat_line(sb, indent, "if (jsb_begin_array(jsb)) return -1;");
         if (field->has_counter) {
@@ -336,6 +374,9 @@ void gen_stringify_field(StringBuilder *sb, Field *field, int indent) {
         sb_cat_line(sb, indent, "else if (_stringify_", field->simple_type, "(jsb, in->", field->name, ")) return -1;");
     } else {
         sb_cat_line(sb, indent, "if (_stringify_", field->simple_type, "(jsb, &in->", field->name, ")) return -1;");
+    }
+    if (field->is_pointer) {
+        sb_cat_line(sb, --indent, "}");
     }
 }
 

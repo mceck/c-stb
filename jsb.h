@@ -287,6 +287,7 @@ int jsb_end_object(Jsb *jsb) {
     jsb_pretty_print_ch(jsb);
     jsb_sappend(&jsb->buffer, '}');
     if (jsb->level == 0) _jsb_end(jsb);
+    jsb->is_first = false;
     return 0;
 }
 
@@ -308,6 +309,7 @@ int jsb_end_array(Jsb *jsb) {
     jsb_pretty_print_ch(jsb);
     jsb_sappend(&jsb->buffer, ']');
     if (jsb->level == 0) _jsb_end(jsb);
+    jsb->is_first = false;
     return 0;
 }
 

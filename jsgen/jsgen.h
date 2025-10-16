@@ -55,6 +55,8 @@ JSON typedef struct {
 #define jsgen_alias(attr_alias)
 // Define an array field that is sized by indicated field.
 #define jsgen_sized_by(counter_field)
+// Define a field as a JSON literal string, type must be char*.
+#define jsgen_json_literal
 
 typedef struct JsGenRegion {
     size_t count;
@@ -116,6 +118,7 @@ void jsgen_free(JsGenAllocator *a) {
 // Transform the field name in JSON to the indicated alias. Alias for jsgen_alias
 #define alias jsgen_alias
 // Region allocator for JSON parsing/stringifying. Alias for JsGenAllocator
+#define json_literal jsgen_json_literal
 #define Allocator JsGenAllocator
 #endif // JSGEN_NO_STRIP
 
